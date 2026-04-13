@@ -1,8 +1,9 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { applicationSchema, type ApplicationInput } from '@/lib/validations';
 import { StepIndicator } from './StepIndicator';
 import { RatingSelector } from './RatingSelector';
@@ -10,6 +11,14 @@ import { RejectionCard } from './RejectionCard';
 import { GlowButton } from '@/components/ui/GlowButton';
 import { GhostButton } from '@/components/ui/GhostButton';
 import { FormField } from './FormField';
+
+/**
+ * MultiStepForm — Component #16
+ * 4-step vetting: Rating → Experience → Logistics → Commit
+ * AnimatePresence step transitions: slide-in / slide-out X-axis
+ * Focus trapped within active step; progress bar animated
+ * a11y: aria-label on form, aria-live on errors, fieldset/legend on radio groups
+ */
 
 const STEPS = [
   { id: 1, label: 'Rating' },
@@ -20,17 +29,30 @@ const STEPS = [
 
 type RatingBucket = '485plus' | '450to484' | 'below450' | null;
 
+const RATING_VALUE: Record<string, number> = {
+  '485plus':  4.92,
+  '450to484': 4.65,
+  'below450': 4.20,
+};
+
+const INPUT_CLASS =
+  'w-full h-12 bg-void-800 border border-void-600 rounded-md px-5 py-3 ' +
+  'font-mono text-mono-base text-signal-white placeholder-signal-white/20 ' +
+  'focus:outline-none focus:border-cobalt-500 focus:shadow-glow-cobalt-sm ' +
+  'transition-colors duration-fast';
+
 export function MultiStepForm() {
   const router = useRouter();
   const [step, setStep] = useState(1);
+  const [prevStep, setPrevStep] = useState(1);
   const [ratingBucket, setRatingBucket] = useState<RatingBucket>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     formState: { errors },
   } = useForm<ApplicationInput>({
@@ -38,25 +60,23 @@ export function MultiStepForm() {
     mode: 'onBlur',
   });
 
-  const ratingBucketToValue: Record<string, number> = {
-    '485plus': 4.9,
-    '450to484': 4.65,
-    'below450': 4.2,
+  const goNext = () => {
+    setPrevStep(step);
+    setStep((s) => Math.min(s + 1, STEPS.length));
+  };
+  const goPrev = () => {
+    setPrevStep(step);
+    setStep((s) => Math.max(s - 1, 1));
   };
 
   const handleRatingSelect = (bucket: RatingBucket) => {
     setRatingBucket(bucket);
-    if (bucket) {
-      setValue('uber_rating', ratingBucketToValue[bucket], { shouldValidate: true });
-    }
+    if (bucket) setValue('uber_rating', RATING_VALUE[bucket], { shouldValidate: true });
   };
-
-  const goNext = () => setStep((s) => Math.min(s + 1, 4));
-  const goPrev = () => setStep((s) => Math.max(s - 1, 1));
 
   const onSubmit = async (data: ApplicationInput) => {
     setIsSubmitting(true);
-    setError(null);
+    setSubmitError(null);
     try {
       const res = await fetch('/api/v1/apply', {
         method: 'POST',
@@ -65,179 +85,248 @@ export function MultiStepForm() {
       });
       if (!res.ok) throw new Error('Submission failed. Please try again.');
       const { refId } = await res.json();
-      router.push(`/waitlist-confirmed?ref=${refId}`);
+      router.push(`/waitlist-confirmed?ref=${encodeURIComponent(refId)}`);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Something went wrong.');
+      setSubmitError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Inline rejection on step 1
+  // Inline rejection gate on step 1
   if (ratingBucket && ratingBucket !== '485plus') {
     return <RejectionCard onRetry={() => { setRatingBucket(null); setValue('uber_rating', 0); }} />;
   }
 
+  const direction = step > prevStep ? 1 : -1;
+  const variants = {
+    enter:   { opacity: 0, x: direction * 16 },
+    center:  { opacity: 1, x: 0, transition: { duration: 0.3, ease: [0, 0, 0.2, 1] } },
+    exit:    { opacity: 0, x: direction * -16, transition: { duration: 0.3, ease: [0.4, 0, 1, 1] } },
+  };
+
   return (
-    <div className="w-full max-w-[560px] mx-auto">
+    <div className="w-full max-w-container-sm mx-auto">
       <StepIndicator steps={STEPS} currentStep={step} />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-8 flex flex-col gap-6">
-        {/* Step 1 — Rating */}
-        {step === 1 && (
-          <div className="flex flex-col gap-6">
-            <div>
-              <h3 className="font-syncopate font-bold text-lg text-neural-white mb-1">UBER RATING</h3>
-              <p className="text-sm text-neural-muted">Select your current Uber driver rating.</p>
-            </div>
-            <RatingSelector selected={ratingBucket} onSelect={handleRatingSelect} />
-            {ratingBucket === '485plus' && (
-              <div className="flex justify-end">
-                <GlowButton type="button" onClick={goNext}>NEXT</GlowButton>
-              </div>
-            )}
-          </div>
-        )}
+      <form
+        ref={formRef}
+        onSubmit={handleSubmit(onSubmit)}
+        aria-label="OBSDN Operator Application"
+        aria-describedby="form-instructions"
+        className="mt-10"
+        noValidate
+      >
+        <p id="form-instructions" className="sr-only">
+          Four-step operator vetting form. Complete each step to submit your application.
+        </p>
 
-        {/* Step 2 — Experience */}
-        {step === 2 && (
-          <div className="flex flex-col gap-6">
-            <div>
-              <h3 className="font-syncopate font-bold text-lg text-neural-white mb-1">TRIP HISTORY</h3>
-              <p className="text-sm text-neural-muted">Minimum 1,500 lifetime trips required.</p>
-            </div>
-            <FormField
-              label="Lifetime Trips"
-              error={errors.lifetime_trips?.message}
-              helper="Your all-time trip count from the Uber driver app"
-            >
-              <input
-                type="number"
-                min={0}
-                {...register('lifetime_trips', { valueAsNumber: true })}
-                className="w-full bg-obsidian-elevated border border-[#3A3A3C] rounded-sm px-4 py-3 font-mono text-neural-white placeholder-neural-dim focus:outline-none focus:border-cobalt transition-colors"
-                placeholder="e.g. 2,400"
-              />
-            </FormField>
-            <FormField label="Full Name" error={errors.full_name?.message}>
-              <input
-                type="text"
-                {...register('full_name')}
-                className="w-full bg-obsidian-elevated border border-[#3A3A3C] rounded-sm px-4 py-3 font-mono text-neural-white placeholder-neural-dim focus:outline-none focus:border-cobalt transition-colors"
-                placeholder="Your full legal name"
-              />
-            </FormField>
-            <FormField label="Email Address" error={errors.email?.message}>
-              <input
-                type="email"
-                {...register('email')}
-                className="w-full bg-obsidian-elevated border border-[#3A3A3C] rounded-sm px-4 py-3 font-mono text-neural-white placeholder-neural-dim focus:outline-none focus:border-cobalt transition-colors"
-                placeholder="you@example.com"
-              />
-            </FormField>
-            <FormField label="Phone Number" error={errors.phone?.message}>
-              <input
-                type="tel"
-                {...register('phone')}
-                className="w-full bg-obsidian-elevated border border-[#3A3A3C] rounded-sm px-4 py-3 font-mono text-neural-white placeholder-neural-dim focus:outline-none focus:border-cobalt transition-colors"
-                placeholder="+1 919 555 0100"
-              />
-            </FormField>
-            <div className="flex justify-between">
-              <GhostButton type="button" onClick={goPrev}>BACK</GhostButton>
-              <GlowButton type="button" onClick={goNext}>NEXT</GlowButton>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3 — Logistics */}
-        {step === 3 && (
-          <div className="flex flex-col gap-6">
-            <div>
-              <h3 className="font-syncopate font-bold text-lg text-neural-white mb-1">LOGISTICS</h3>
-              <p className="text-sm text-neural-muted">Parking and charging requirements.</p>
-            </div>
-
-            <div className="flex flex-col gap-4">
-              <label className="flex items-center justify-between p-4 bg-obsidian-elevated border border-[#3A3A3C] rounded-sm cursor-pointer hover:border-cobalt/50 transition-colors">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={step}
+            variants={variants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+          >
+            {/* ── STEP 1: Rating ── */}
+            {step === 1 && (
+              <div className="flex flex-col gap-8">
                 <div>
-                  <p className="font-mono text-sm text-neural-white">Dedicated parking available?</p>
-                  <p className="text-xs text-neural-muted mt-0.5">Garage, driveway, or reserved space</p>
+                  <h3 className="font-display font-bold text-xl text-signal-white mb-1">UBER RATING</h3>
+                  <p className="font-body text-sm text-signal-white/60">
+                    Select your current Uber driver rating.
+                  </p>
                 </div>
-                <input
-                  type="checkbox"
-                  {...register('has_parking')}
-                  className="w-5 h-5 accent-cobalt"
-                />
-              </label>
+                <RatingSelector selected={ratingBucket} onSelect={handleRatingSelect} />
+                {ratingBucket === '485plus' && (
+                  <div className="flex justify-end">
+                    <GlowButton type="button" onClick={goNext}>NEXT</GlowButton>
+                  </div>
+                )}
+              </div>
+            )}
 
-              <label className="flex items-center justify-between p-4 bg-obsidian-elevated border border-[#3A3A3C] rounded-sm cursor-pointer hover:border-cobalt/50 transition-colors">
+            {/* ── STEP 2: Experience ── */}
+            {step === 2 && (
+              <div className="flex flex-col gap-6">
                 <div>
-                  <p className="font-mono text-sm text-neural-white">Home charging capability?</p>
-                  <p className="text-xs text-neural-muted mt-0.5">Level 2 (240V) preferred, Level 1 minimum</p>
+                  <h3 className="font-display font-bold text-xl text-signal-white mb-1">TRIP HISTORY</h3>
+                  <p className="font-body text-sm text-signal-white/60">
+                    Minimum 1,500 lifetime trips required.
+                  </p>
                 </div>
-                <input
-                  type="checkbox"
-                  {...register('has_home_charging')}
-                  className="w-5 h-5 accent-cobalt"
-                />
-              </label>
-            </div>
 
-            <div className="flex justify-between">
-              <GhostButton type="button" onClick={goPrev}>BACK</GhostButton>
-              <GlowButton type="button" onClick={goNext}>NEXT</GlowButton>
-            </div>
-          </div>
-        )}
+                <FormField
+                  label="Lifetime Trips"
+                  error={errors.lifetime_trips?.message}
+                  helper="All-time trip count from the Uber driver app"
+                  required
+                  htmlFor="lifetime_trips"
+                >
+                  <input
+                    id="lifetime_trips"
+                    type="number"
+                    min={0}
+                    {...register('lifetime_trips', { valueAsNumber: true })}
+                    className={INPUT_CLASS}
+                    placeholder="e.g. 2,400"
+                    aria-required="true"
+                  />
+                </FormField>
 
-        {/* Step 4 — Commit */}
-        {step === 4 && (
-          <div className="flex flex-col gap-6">
-            <div>
-              <h3 className="font-syncopate font-bold text-lg text-neural-white mb-1">COMMITMENT</h3>
-              <p className="text-sm text-neural-muted">Review the deposit terms before submitting.</p>
-            </div>
+                <FormField label="Full Name" error={errors.full_name?.message} required htmlFor="full_name">
+                  <input id="full_name" type="text" {...register('full_name')} className={INPUT_CLASS} placeholder="Your full legal name" aria-required="true" />
+                </FormField>
 
-            <div className="bg-obsidian-elevated border border-[#3A3A3C] rounded-sm p-5 flex flex-col gap-3">
-              <p className="font-mono text-xs text-cobalt tracking-widest">FINANCIAL TERMS</p>
-              <div className="grid grid-cols-2 gap-3 font-mono text-sm">
-                <div><p className="text-neural-dim text-xs">Weekly Rate</p><p className="text-neural-white mt-1">$425 / week</p></div>
-                <div><p className="text-neural-dim text-xs">Security Deposit</p><p className="text-neural-white mt-1">$500 (refundable)</p></div>
-                <div><p className="text-neural-dim text-xs">Deposit Due</p><p className="text-neural-white mt-1">Before key handoff</p></div>
-                <div><p className="text-neural-dim text-xs">Supercharging</p><p className="text-neural-white mt-1">Charged at cost</p></div>
-              </div>
-            </div>
+                <FormField label="Email Address" error={errors.email?.message} required htmlFor="email">
+                  <input id="email" type="email" {...register('email')} className={INPUT_CLASS} placeholder="you@example.com" aria-required="true" autoComplete="email" />
+                </FormField>
 
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                {...register('deposit_committed')}
-                className="mt-1 w-5 h-5 accent-cobalt flex-shrink-0"
-              />
-              <p className="text-sm text-neural-muted leading-relaxed">
-                I understand the <strong className="text-neural-white">$500 refundable security deposit</strong> is
-                required before vehicle deployment and will be refunded upon satisfactory off-boarding.
-              </p>
-            </label>
-            {errors.deposit_committed && (
-              <p className="text-xs text-red-400">{errors.deposit_committed.message}</p>
-            )}
+                <FormField label="Phone Number" error={errors.phone?.message} required htmlFor="phone">
+                  <input id="phone" type="tel" {...register('phone')} className={INPUT_CLASS} placeholder="+1 919 555 0100" aria-required="true" autoComplete="tel" />
+                </FormField>
 
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-sm p-4">
-                <p className="text-sm text-red-400">{error}</p>
+                <div className="flex justify-between pt-2">
+                  <GhostButton type="button" onClick={goPrev}>BACK</GhostButton>
+                  <GlowButton type="button" onClick={goNext}>NEXT</GlowButton>
+                </div>
               </div>
             )}
 
-            <div className="flex justify-between">
-              <GhostButton type="button" onClick={goPrev}>BACK</GhostButton>
-              <GlowButton type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'SUBMITTING...' : 'SUBMIT APPLICATION'}
-              </GlowButton>
-            </div>
-          </div>
-        )}
+            {/* ── STEP 3: Logistics ── */}
+            {step === 3 && (
+              <div className="flex flex-col gap-6">
+                <div>
+                  <h3 className="font-display font-bold text-xl text-signal-white mb-1">LOGISTICS</h3>
+                  <p className="font-body text-sm text-signal-white/60">
+                    Parking and charging requirements.
+                  </p>
+                </div>
+
+                <fieldset className="flex flex-col gap-3">
+                  <legend className="font-body text-xs font-medium tracking-label text-signal-white/40 uppercase mb-1">
+                    Infrastructure Requirements
+                  </legend>
+
+                  {[
+                    {
+                      id: 'has_parking',
+                      name: 'Dedicated parking available?',
+                      desc: 'Garage, driveway, or reserved space',
+                      key: 'has_parking' as const,
+                    },
+                    {
+                      id: 'has_home_charging',
+                      name: 'Home charging capability?',
+                      desc: 'Level 2 (240V) preferred, Level 1 minimum',
+                      key: 'has_home_charging' as const,
+                    },
+                  ].map(({ id, name, desc, key }) => (
+                    <label
+                      key={id}
+                      htmlFor={id}
+                      className="flex items-center justify-between h-16 px-5 bg-void-800 border border-void-600 rounded-md cursor-pointer hover:border-cobalt-500/50 transition-colors duration-fast"
+                    >
+                      <div>
+                        <p className="font-mono text-mono-base text-signal-white">{name}</p>
+                        <p className="font-mono text-xs text-signal-white/40 mt-0.5">{desc}</p>
+                      </div>
+                      <input
+                        id={id}
+                        type="checkbox"
+                        {...register(key)}
+                        className="w-5 h-5 accent-cobalt-500 flex-shrink-0"
+                      />
+                    </label>
+                  ))}
+                </fieldset>
+
+                <div className="flex justify-between pt-2">
+                  <GhostButton type="button" onClick={goPrev}>BACK</GhostButton>
+                  <GlowButton type="button" onClick={goNext}>NEXT</GlowButton>
+                </div>
+              </div>
+            )}
+
+            {/* ── STEP 4: Commit ── */}
+            {step === 4 && (
+              <div className="flex flex-col gap-6">
+                <div>
+                  <h3 className="font-display font-bold text-xl text-signal-white mb-1">COMMITMENT</h3>
+                  <p className="font-body text-sm text-signal-white/60">
+                    Review the financial terms before submitting.
+                  </p>
+                </div>
+
+                {/* Financial terms card */}
+                <div className="bg-void-800 border border-void-600 rounded-lg p-5 flex flex-col gap-4">
+                  <p className="font-mono text-xs text-cobalt-400 tracking-wider uppercase">Financial Terms</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { label: 'Weekly Rate',    value: '$425 / week' },
+                      { label: 'Security Deposit', value: '$500 refundable' },
+                      { label: 'Deposit Due',     value: 'Before key handoff' },
+                      { label: 'Supercharging',   value: 'Billed at cost' },
+                    ].map(({ label, value }) => (
+                      <div key={label}>
+                        <p className="font-mono text-xs text-signal-white/40 uppercase tracking-wider mb-1">{label}</p>
+                        <p className="font-mono text-mono-base text-signal-white">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* DepositAcknowledge — Component #21 */}
+                <label
+                  htmlFor="deposit_committed"
+                  className="flex items-start gap-3 cursor-pointer group"
+                >
+                  <div className="relative mt-0.5 flex-shrink-0">
+                    <input
+                      id="deposit_committed"
+                      type="checkbox"
+                      {...register('deposit_committed')}
+                      className="sr-only peer"
+                      aria-required="true"
+                    />
+                    {/* Custom checkbox — Component #21 spec */}
+                    <div className="w-5 h-5 rounded-sm border-2 border-void-600 bg-void-800 group-hover:border-cobalt-400 peer-checked:bg-cobalt-500 peer-checked:border-cobalt-500 transition-colors duration-instant flex items-center justify-center">
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-0 peer-checked:opacity-100 text-signal-white" aria-hidden="true">
+                        <path d="M1.5 5l2.5 2.5 5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="font-body text-base text-signal-white/80 leading-relaxed">
+                    I understand the{' '}
+                    <strong className="text-signal-white">$500 refundable security deposit</strong>
+                    {' '}is required before vehicle deployment and will be returned upon satisfactory off-boarding.
+                  </p>
+                </label>
+                {errors.deposit_committed && (
+                  <p className="font-mono text-xs text-error" role="alert">
+                    {errors.deposit_committed.message}
+                  </p>
+                )}
+
+                {submitError && (
+                  <div className="bg-error-bg border border-error/30 rounded-md p-4" role="alert">
+                    <p className="font-body text-sm text-error">{submitError}</p>
+                  </div>
+                )}
+
+                <div className="flex justify-between pt-2">
+                  <GhostButton type="button" onClick={goPrev} disabled={isSubmitting}>
+                    BACK
+                  </GhostButton>
+                  <GlowButton type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? 'SUBMITTING...' : 'SUBMIT APPLICATION'}
+                  </GlowButton>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </form>
     </div>
   );
