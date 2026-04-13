@@ -6,12 +6,14 @@ const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
   display: 'swap',
+  weight: ['400', '500', '600'],
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-jetbrains',
   display: 'swap',
+  weight: ['400', '500'],
 });
 
 export const metadata: Metadata = {
@@ -27,12 +29,9 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://obsdn.ev',
     siteName: 'OBSDN EV Network',
-    images: [{ url: '/og/home.jpg', width: 1200, height: 630, alt: 'OBSDN EV Network' }],
+    images: [{ url: '/og/home.jpg', width: 1200, height: 630, alt: 'OBSDN EV Network — Premium Tesla Operator Program' }],
   },
-  twitter: {
-    card: 'summary_large_image',
-    site: '@obsdn.ev',
-  },
+  twitter: { card: 'summary_large_image', site: '@obsdn.ev' },
   robots: { index: true, follow: true },
 };
 
@@ -43,8 +42,7 @@ const orgSchema = {
   url: 'https://obsdn.ev',
   sameAs: ['https://instagram.com/obsdn.ev'],
   areaServed: { '@type': 'City', name: 'Raleigh', addressRegion: 'NC' },
-  description:
-    'Premium EV logistics infrastructure for elite rideshare operators in the Triangle.',
+  description: 'Premium EV logistics infrastructure for elite rideshare operators in the Triangle.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -53,8 +51,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Syncopate: uppercase Latin subset only for ~60% size reduction */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Syncopate:wght@700&display=swap&text=ABCDEFGHIJKLMNOPQRSTUVWXYZ%20.%2F-"
           rel="stylesheet"
         />
         <script
@@ -62,7 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
         />
       </head>
-      <body className="bg-obsidian text-neural-white antialiased">{children}</body>
+      <body>{children}</body>
     </html>
   );
 }
