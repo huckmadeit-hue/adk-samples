@@ -4,6 +4,7 @@ import { Footer } from '@/components/layout/Footer';
 import { StatBlock } from '@/components/ui/StatBlock';
 import { MultiStepForm } from '@/components/operate/MultiStepForm';
 import { SectionDivider } from '@/components/layout/SectionDivider';
+import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
 export const metadata: Metadata = {
   title: 'Become an Operator',
@@ -34,7 +35,10 @@ const faqSchema = {
     {
       '@type': 'Question',
       name: 'Is a security deposit required?',
-      acceptedAnswer: { '@type': 'Answer', text: 'Yes, a $500 refundable security deposit is due before vehicle deployment.' },
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes, a $500 refundable security deposit is due before vehicle deployment.',
+      },
     },
   ],
 };
@@ -47,70 +51,92 @@ export default function OperatePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
-      <main className="pt-16">
-        {/* Page hero */}
-        <section className="relative bg-obsidian py-24 lg:py-32 border-b border-[#3A3A3C] overflow-hidden">
-          <div aria-hidden className="absolute inset-0 bg-ambient-gradient opacity-60 pointer-events-none" />
-          <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 flex flex-col gap-4">
-            <p className="font-mono text-xs tracking-[0.3em] text-cobalt uppercase">Operator Recruitment</p>
-            <h1 className="font-syncopate font-bold text-4xl lg:text-6xl text-neural-white leading-none">
+      <main id="main-content" tabIndex={-1} className="pt-16">
+        {/* PageHero — Component #34 */}
+        <section
+          className="relative bg-void-950 py-24 lg:py-32 border-b border-void-600 overflow-hidden"
+          aria-labelledby="operate-heading"
+        >
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: 'radial-gradient(ellipse 80% 60% at 20% 80%, rgba(45,91,255,0.10) 0%, transparent 70%)' }}
+          />
+          <div className="relative z-10 max-w-container-lg mx-auto px-6 lg:px-8 flex flex-col gap-4">
+            <p className="font-mono text-xs tracking-caps text-cobalt-500 uppercase">Operator Recruitment</p>
+            <h1
+              id="operate-heading"
+              className="font-display font-bold text-3xl text-signal-white leading-none"
+            >
               APPLY TO
               <br />
               THE NETWORK
             </h1>
-            <p className="text-neural-muted text-lg max-w-lg leading-relaxed">
-              We are selective by design. Every operator in the OBSDN network represents
-              the infrastructure. Standards are non-negotiable.
+            <p className="font-body text-md text-signal-white/60 max-w-lg leading-relaxed">
+              We are selective by design. Every operator in the OBSDN network
+              represents the infrastructure. Standards are non-negotiable.
             </p>
           </div>
         </section>
 
-        {/* Requirements */}
-        <section id="requirements" className="bg-obsidian-surface py-20 border-b border-[#3A3A3C]">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col gap-12">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
-              <StatBlock value="4.85" label="Min Rating" sub="Uber driver score" />
-              <StatBlock value="1,500" label="Min Trips" sub="Lifetime total" />
-              <StatBlock value="$500" label="Deposit" sub="Refundable" />
-              <StatBlock value="$425" label="Per Week" sub="Base lease rate" />
-            </div>
+        {/* Requirements — 4x StatBlock row */}
+        <section id="requirements" className="bg-void-800 py-20 border-b border-void-600">
+          <div className="max-w-container-lg mx-auto px-6 lg:px-8 flex flex-col gap-12">
+            <ScrollReveal>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 sm:gap-4">
+                {[
+                  { value: '4.85', label: 'Min Rating',    sub: 'Uber driver score' },
+                  { value: '1,500', label: 'Min Trips',    sub: 'Lifetime total' },
+                  { value: '$500',  label: 'Deposit',      sub: 'Refundable' },
+                  { value: '$425',  label: 'Per Week',     sub: 'Base lease rate' },
+                ].map((stat, i) => (
+                  <div key={stat.label} className={`flex items-center ${
+                    i < 3 ? 'sm:border-r sm:border-void-600 sm:pr-4' : ''
+                  }`}>
+                    <StatBlock {...stat} className="flex-1" />
+                  </div>
+                ))}
+              </div>
+            </ScrollReveal>
 
             <SectionDivider />
 
-            <div className="grid md:grid-cols-2 gap-8 text-sm text-neural-muted leading-relaxed">
-              <div>
-                <p className="font-syncopate text-xs tracking-widest text-neural-white mb-3">THE DEAL</p>
-                <p>
-                  OBSDN provides the asset. You provide the labor and compliance. The weekly
-                  rate of <strong className="text-neural-white">$425</strong> covers vehicle access,
-                  maintenance coordination, and platform support. Supercharging is
-                  billed at cost on your weekly invoice.
-                </p>
+            <ScrollReveal delay={0.1}>
+              <div className="grid md:grid-cols-2 gap-8">
+                <div>
+                  <p className="font-display text-xs tracking-widest text-signal-white uppercase mb-3">THE DEAL</p>
+                  <p className="font-body text-base text-signal-white/60 leading-relaxed">
+                    OBSDN provides the asset. You provide the labor and compliance. The weekly
+                    rate of <strong className="text-signal-white">$425</strong> covers vehicle
+                    access, maintenance coordination, and platform support. Supercharging is billed
+                    at cost on your weekly invoice.
+                  </p>
+                </div>
+                <div>
+                  <p className="font-display text-xs tracking-widest text-signal-white uppercase mb-3">THE STANDARD</p>
+                  <p className="font-body text-base text-signal-white/60 leading-relaxed">
+                    A 4.85 rating isn&apos;t arbitrary — it&apos;s the threshold where passenger
+                    satisfaction becomes consistent. Our vehicles operate in premium surge zones.
+                    Every operator reflects directly on the OBSDN brand.
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-syncopate text-xs tracking-widest text-neural-white mb-3">THE STANDARD</p>
-                <p>
-                  A 4.85 rating isn&apos;t arbitrary — it&apos;s the threshold where passenger
-                  satisfaction becomes consistent. Our vehicles operate in premium surge zones.
-                  Every operator reflects directly on the OBSDN brand.
-                </p>
-              </div>
-            </div>
+            </ScrollReveal>
           </div>
         </section>
 
         {/* Application form */}
-        <section id="apply" className="bg-obsidian py-24 lg:py-32">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col items-center gap-10">
-            <div className="text-center flex flex-col gap-3 max-w-lg">
-              <p className="font-mono text-xs tracking-[0.3em] text-cobalt uppercase">Vetting Form</p>
-              <h2 className="font-syncopate font-bold text-2xl lg:text-3xl text-neural-white">
+        <section id="apply" className="bg-void-950 py-24 lg:py-32">
+          <div className="max-w-container-lg mx-auto px-6 lg:px-8 flex flex-col items-center gap-10">
+            <ScrollReveal className="text-center flex flex-col gap-3 max-w-lg">
+              <p className="font-mono text-xs tracking-caps text-cobalt-500 uppercase">Vetting Form</p>
+              <h2 className="font-display font-bold text-2xl text-signal-white leading-none">
                 NODE APPLICATION
               </h2>
-              <p className="text-neural-muted text-sm">
-                Four steps. Takes under 3 minutes. We read every submission.
+              <p className="font-body text-sm text-signal-white/60">
+                Four steps. Under 3 minutes. We read every submission.
               </p>
-            </div>
+            </ScrollReveal>
             <MultiStepForm />
           </div>
         </section>
