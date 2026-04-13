@@ -1,5 +1,9 @@
+'use client';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+
+const MotionLink = motion(Link);
 
 interface GhostButtonProps {
   children: React.ReactNode;
@@ -7,23 +11,60 @@ interface GhostButtonProps {
   onClick?: () => void;
   type?: 'button' | 'submit' | 'reset';
   size?: 'sm' | 'md' | 'lg';
+  disabled?: boolean;
   className?: string;
 }
 
-export function GhostButton({ children, href, onClick, type = 'button', size = 'md', className }: GhostButtonProps) {
-  const base = cn(
-    'inline-flex items-center justify-center font-syncopate font-bold tracking-widest uppercase transition-all duration-200',
-    'bg-transparent text-cobalt border border-cobalt rounded-sm',
-    'hover:bg-cobalt/10 hover:shadow-[0_0_20px_rgba(45,91,255,0.3)] active:scale-[0.98]',
-    {
-      'text-xs px-4 py-2': size === 'sm',
-      'text-sm px-6 py-3': size === 'md',
-      'text-base px-10 py-4': size === 'lg',
-    },
-    className
-  );
+const SIZE: Record<string, string> = {
+  sm: 'h-9 px-4 text-xs min-w-[120px]',
+  md: 'h-12 px-5 text-base min-w-[180px]',
+  lg: 'h-14 px-8 text-base min-w-[200px]',
+};
+
+const BASE =
+  'inline-flex items-center justify-center font-body font-semibold tracking-wide uppercase rounded-md ' +
+  'bg-transparent text-cobalt-500 border border-cobalt-500 ' +
+  'transition-colors duration-fast ease-standard ' +
+  'hover:bg-cobalt-500/10 hover:border-cobalt-400 hover:shadow-glow-cobalt-sm ' +
+  'active:bg-cobalt-500/20 ' +
+  'disabled:opacity-40 disabled:cursor-not-allowed ' +
+  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-cobalt-500 focus-visible:outline-offset-2';
+
+export function GhostButton({
+  children,
+  href,
+  onClick,
+  type = 'button',
+  size = 'md',
+  disabled,
+  className,
+}: GhostButtonProps) {
+  const cls = cn(BASE, SIZE[size], className);
+  const tap = disabled ? {} : { scale: 0.98 };
+
   if (href) {
-    return <Link href={href} className={base}>{children}</Link>;
+    return (
+      <MotionLink
+        href={href}
+        className={cls}
+        whileTap={tap}
+        transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
+      >
+        {children}
+      </MotionLink>
+    );
   }
-  return <button type={type} onClick={onClick} className={base}>{children}</button>;
+
+  return (
+    <motion.button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={cls}
+      whileTap={tap}
+      transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
+    >
+      {children}
+    </motion.button>
+  );
 }
