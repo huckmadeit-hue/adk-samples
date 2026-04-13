@@ -1,66 +1,101 @@
 import { GlowButton } from '@/components/ui/GlowButton';
+import { ScrollReveal } from '@/components/ui/ScrollReveal';
+
+/**
+ * EconomicsSection — Component #07 (EconomicsTable)
+ * void-800 bg, void-600 border, radius-lg, overflow hidden
+ * Header: void-700 bg, Inter 600 13px, signal-white/40, ALL CAPS
+ * Rows: alternate void-800/void-900, JetBrains Mono 15px
+ * Highlight row: left border 3px cobalt-500, cobalt-500/5 bg
+ */
 
 const rows = [
-  { tier: 'Weekly Platform Rent', obsdn: '$425 flat', uberx: 'Variable (higher)' },
-  { tier: 'Target Weekly Gross', obsdn: '$1,800–$2,400', uberx: '$1,100–$1,600' },
-  { tier: 'Surge Zone Access', obsdn: 'Full Triangle', uberx: 'Market-rate' },
-  { tier: 'Vehicle Ownership', obsdn: 'None required', uberx: 'Your asset, your risk' },
-  { tier: 'Maintenance Burden', obsdn: 'Covered by OBSDN', uberx: 'Operator pays all' },
-  { tier: 'Minimum Rating', obsdn: '4.85+', uberx: '4.70+' },
-  { tier: 'Insurance Class', obsdn: 'Commercial (P2)', uberx: 'Rideshare add-on' },
+  { tier: 'Weekly Platform Rent',  obsdn: '$425 flat',       uberx: 'Variable (higher)',    highlight: false },
+  { tier: 'Target Weekly Gross',   obsdn: '$1,800–$2,400',   uberx: '$1,100–$1,600',        highlight: true  },
+  { tier: 'Surge Zone Access',     obsdn: 'Full Triangle',   uberx: 'Market-rate',          highlight: false },
+  { tier: 'Vehicle Ownership',     obsdn: 'None required',   uberx: 'Your asset, your risk', highlight: false },
+  { tier: 'Maintenance Burden',    obsdn: 'Covered by OBSDN', uberx: 'Operator pays all',   highlight: false },
+  { tier: 'Minimum Rating',        obsdn: '4.85+',           uberx: '4.70+',                highlight: false },
+  { tier: 'Insurance Class',       obsdn: 'Commercial (P2)', uberx: 'Rideshare add-on',     highlight: false },
 ];
 
 export function EconomicsSection() {
   return (
-    <section id="economics" className="bg-obsidian py-24 lg:py-32">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col gap-12">
-        <div className="flex flex-col gap-4 max-w-xl">
-          <p className="font-mono text-xs tracking-[0.3em] text-cobalt uppercase">Operator Economics</p>
-          <h2 className="font-syncopate font-bold text-3xl lg:text-4xl text-neural-white leading-tight">
-            WHY OPERATORS
-            <br />
-            CHOOSE OBSDN
-          </h2>
-          <p className="text-neural-muted leading-relaxed">
-            The Triangle’s premium tier earns more. Our operators consistently outperform
-            standard UberX in net weekly take-home.
+    <section id="economics" className="bg-void-950 py-24 lg:py-32">
+      <div className="max-w-container-lg mx-auto px-6 lg:px-8 flex flex-col gap-12">
+        <ScrollReveal>
+          <div className="flex flex-col gap-4 max-w-xl">
+            <p className="font-mono text-xs tracking-caps text-cobalt-500 uppercase">
+              Operator Economics
+            </p>
+            <h2 className="font-display font-bold text-2xl text-signal-white leading-none">
+              WHY OPERATORS
+              <br />
+              CHOOSE OBSDN
+            </h2>
+            <p className="font-body text-base text-signal-white/60 leading-relaxed">
+              The Triangle’s premium tier earns more. Our operators consistently
+              outperform standard UberX in net weekly take-home.
+            </p>
+          </div>
+        </ScrollReveal>
+
+        <ScrollReveal delay={0.1}>
+          {/* EconomicsTable — horizontal scroll on mobile */}
+          <div className="overflow-x-auto">
+            <div className="min-w-[480px]">
+              <div className="rounded-lg border border-void-600 overflow-hidden">
+                {/* Header row */}
+                <div className="grid grid-cols-3 bg-void-700 border-b border-void-600">
+                  {['Tier', 'OBSDN Rate', 'UberX Rate'].map((col, i) => (
+                    <div key={col} className="px-6 py-4">
+                      <span
+                        className={`font-body text-xs font-semibold tracking-wider uppercase ${
+                          i === 1 ? 'text-cobalt-400' : 'text-signal-white/40'
+                        }`}
+                      >
+                        {col}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Data rows */}
+                {rows.map((row, i) => (
+                  <div
+                    key={row.tier}
+                    className={`grid grid-cols-3 border-b border-void-600/50 last:border-b-0 ${
+                      row.highlight
+                        ? 'bg-cobalt-500/5 border-l-[3px] border-l-cobalt-500'
+                        : i % 2 === 0
+                        ? 'bg-void-800'
+                        : 'bg-void-900'
+                    }`}
+                  >
+                    <div className="px-6 py-4">
+                      <span className="font-mono text-mono-base text-signal-white/60">{row.tier}</span>
+                    </div>
+                    <div className="px-6 py-4">
+                      <span className="font-mono text-mono-base text-signal-white font-medium">{row.obsdn}</span>
+                    </div>
+                    <div className="px-6 py-4">
+                      <span className="font-mono text-mono-base text-signal-white/40">{row.uberx}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <p className="font-mono text-xs text-signal-white/20 mt-4">
+            * All figures based on Triangle market averages. Individual results vary.
           </p>
-        </div>
+        </ScrollReveal>
 
-        {/* Data table */}
-        <div className="overflow-x-auto rounded-sm border border-[#3A3A3C]">
-          <table className="w-full font-mono text-sm">
-            <thead>
-              <tr className="bg-obsidian-elevated border-b border-[#3A3A3C]">
-                <th className="text-left px-6 py-4 text-xs tracking-widest text-neural-dim uppercase font-medium">Tier</th>
-                <th className="text-left px-6 py-4 text-xs tracking-widest text-cobalt uppercase font-medium">OBSDN Rate</th>
-                <th className="text-left px-6 py-4 text-xs tracking-widest text-neural-dim uppercase font-medium">UberX Rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr
-                  key={row.tier}
-                  className={`border-b border-[#3A3A3C]/50 hover:bg-obsidian-elevated/50 transition-colors ${
-                    i === rows.length - 1 ? 'border-b-0' : ''
-                  }`}
-                >
-                  <td className="px-6 py-4 text-neural-muted">{row.tier}</td>
-                  <td className="px-6 py-4 text-neural-white font-medium">{row.obsdn}</td>
-                  <td className="px-6 py-4 text-neural-dim">{row.uberx}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <p className="font-mono text-xs text-neural-dim">
-          * All figures based on Triangle market averages. Individual results vary.
-        </p>
-
-        <div className="flex justify-center">
-          <GlowButton href="/operate" size="lg">APPLY FOR A NODE</GlowButton>
-        </div>
+        <ScrollReveal delay={0.15}>
+          <div className="flex justify-center">
+            <GlowButton href="/operate" size="lg">APPLY FOR A NODE</GlowButton>
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   );

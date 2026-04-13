@@ -21,7 +21,7 @@ export default function HomePage() {
   return (
     <>
       <NavBar />
-      <main className="pt-16">
+      <main id="main-content" tabIndex={-1}>
         <HeroSection />
         <HardwareSection />
         <EconomicsSection />
